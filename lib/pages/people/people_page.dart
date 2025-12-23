@@ -58,42 +58,72 @@ class _PeoplePageState extends State<PeoplePage> {
                     showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(20),
+                        ),
+                      ),
                       builder:
-                          (context) => Padding(
-                            padding: EdgeInsets.only(
-                              bottom: MediaQuery.of(context).viewInsets.bottom,
-                              left: 16,
-                              right: 16,
-                              top: 16,
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                TextField(
-                                  controller: _nameController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Name',
-                                  ),
+                          (context) => SafeArea(
+                            child: SingleChildScrollView(
+                              padding: EdgeInsets.only(
+                                bottom:
+                                    MediaQuery.of(context).viewInsets.bottom,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.person_add_alt,
+                                          color:
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Add Person',
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    TextField(
+                                      controller: _nameController,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Name',
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextField(
+                                      controller: _notesController,
+                                      minLines: 2,
+                                      maxLines: 4,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Notes',
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: FilledButton(
+                                        onPressed: _addPerson,
+                                        child: const Text('Add person'),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                  ],
                                 ),
-                                const SizedBox(height: 8),
-                                TextField(
-                                  controller: _notesController,
-                                  minLines: 2,
-                                  maxLines: 4,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Notes',
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: FilledButton(
-                                    onPressed: _addPerson,
-                                    child: const Text('Add person'),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                              ],
+                              ),
                             ),
                           ),
                     );

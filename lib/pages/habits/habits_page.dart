@@ -88,84 +88,117 @@ class _HabitsPageState extends State<HabitsPage> {
                     showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(20),
+                        ),
+                      ),
                       builder:
-                          (context) => Padding(
-                            padding: EdgeInsets.only(
-                              bottom: MediaQuery.of(context).viewInsets.bottom,
-                              left: 16,
-                              right: 16,
-                              top: 16,
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                TextField(
-                                  controller: _nameController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Habit name',
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                DropdownButtonFormField<String>(
-                                  initialValue: _frequency,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Frequency',
-                                  ),
-                                  items: const [
-                                    DropdownMenuItem(
-                                      value: 'daily',
-                                      child: Text('Daily'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'weekly',
-                                      child: Text('Weekly'),
-                                    ),
-                                  ],
-                                  onChanged:
-                                      (v) => setState(
-                                        () => _frequency = v ?? 'daily',
-                                      ),
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
+                          (context) => SafeArea(
+                            child: SingleChildScrollView(
+                              padding: EdgeInsets.only(
+                                bottom:
+                                    MediaQuery.of(context).viewInsets.bottom,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Expanded(
-                                      child: InkWell(
-                                        onTap: () async {
-                                          final picked = await showDatePicker(
-                                            context: context,
-                                            initialDate: _startDate,
-                                            firstDate: DateTime(2000),
-                                            lastDate: DateTime(2100),
-                                          );
-                                          if (picked != null) {
-                                            setState(() => _startDate = picked);
-                                          }
-                                        },
-                                        child: InputDecorator(
-                                          decoration: const InputDecoration(
-                                            labelText: 'Start date',
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.add_task,
+                                          color:
+                                              Theme.of(
+                                                context,
+                                              ).colorScheme.primary,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'New Habit',
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
                                           ),
-                                          child: Text(
-                                            DateFormat.yMMMd().format(
-                                              _startDate,
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    TextField(
+                                      controller: _nameController,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Habit name',
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    DropdownButtonFormField<String>(
+                                      initialValue: _frequency,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Frequency',
+                                      ),
+                                      items: const [
+                                        DropdownMenuItem(
+                                          value: 'daily',
+                                          child: Text('Daily'),
+                                        ),
+                                        DropdownMenuItem(
+                                          value: 'weekly',
+                                          child: Text('Weekly'),
+                                        ),
+                                      ],
+                                      onChanged:
+                                          (v) => setState(
+                                            () => _frequency = v ?? 'daily',
+                                          ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: InkWell(
+                                            onTap: () async {
+                                              final picked =
+                                                  await showDatePicker(
+                                                    context: context,
+                                                    initialDate: _startDate,
+                                                    firstDate: DateTime(2000),
+                                                    lastDate: DateTime(2100),
+                                                  );
+                                              if (picked != null) {
+                                                setState(
+                                                  () => _startDate = picked,
+                                                );
+                                              }
+                                            },
+                                            child: InputDecorator(
+                                              decoration: const InputDecoration(
+                                                labelText: 'Start date',
+                                              ),
+                                              child: Text(
+                                                DateFormat.yMMMd().format(
+                                                  _startDate,
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: FilledButton(
+                                        onPressed: _addHabit,
+                                        child: const Text('Create habit'),
                                       ),
                                     ),
+                                    const SizedBox(height: 12),
                                   ],
                                 ),
-                                const SizedBox(height: 12),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: FilledButton(
-                                    onPressed: _addHabit,
-                                    child: const Text('Create habit'),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                              ],
+                              ),
                             ),
                           ),
                     );

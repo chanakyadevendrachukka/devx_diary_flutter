@@ -477,11 +477,25 @@ class _DashboardPageState extends State<DashboardPage> {
       valueListenable: LocalDataService.getBox('habits').listenable(),
       builder: (context, Box box, _) {
         final habits =
-            box.values.map((e) => Map<String, dynamic>.from(e as Map)).toList()
+            box.values.map((e) {
+                // Normalize top-level habit map
+                final m = Map<String, dynamic>.from(e as Map);
+                // Ensure nested 'completions' map uses String keys for safe access
+                final c = m['completions'];
+                if (c is Map) {
+                  // Convert keys to String, preserve values
+                  m['completions'] = Map<String, dynamic>.from(
+                    c.map((key, value) => MapEntry(key.toString(), value)),
+                  );
+                }
+                return m;
+              }).toList()
               ..sort(
                 (a, b) => _habitStreak(
-                  b['completions'],
-                ).compareTo(_habitStreak(a['completions'])),
+                  b['completions'] as Map<String, dynamic>?,
+                ).compareTo(
+                  _habitStreak(a['completions'] as Map<String, dynamic>?),
+                ),
               );
 
         final topHabits = habits.take(3).toList();
@@ -516,7 +530,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   )
                 else
                   ...topHabits.map((habit) {
-                    final streak = _habitStreak(habit['completions']);
+                    final streak = _habitStreak(
+                      habit['completions'] as Map<String, dynamic>?,
+                    );
                     final freq = (habit['frequency'] ?? 'daily').toString();
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
@@ -589,89 +605,120 @@ class _DashboardPageState extends State<DashboardPage> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (sheetCtx) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-                left: 16,
-                right: 16,
-                top: 16,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(labelText: 'Habit name'),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: frequency,
-                    decoration: const InputDecoration(labelText: 'Frequency'),
-                    items: const [
-                      DropdownMenuItem(value: 'daily', child: Text('Daily')),
-                      DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
-                    ],
-                    onChanged:
-                        (v) => setSheetState(() {
-                          frequency = v ?? 'daily';
-                        }),
-                  ),
-                  const SizedBox(height: 12),
-                  InkWell(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: startDate,
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
-                        setSheetState(() => startDate = picked);
-                      }
-                    },
-                    child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Start date',
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            return SafeArea(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
                         children: [
-                          Text(DateFormat.yMMMd().format(startDate)),
-                          const Icon(Icons.calendar_today, size: 18),
+                          Icon(
+                            Icons.check_circle,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Quick Habit',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
                         ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () async {
-                        final name = nameController.text.trim();
-                        if (name.isEmpty) return;
-                        final id = const Uuid().v4();
-                        await LocalDataService.saveData('habits', id, {
-                          'id': id,
-                          'name': name,
-                          'frequency': frequency,
-                          'startDate': startDate.toIso8601String(),
-                          'completions': <String, bool>{},
-                          'createdAt': DateTime.now().toIso8601String(),
-                        });
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Habit added: $name')),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Habit name',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: frequency,
+                        decoration: const InputDecoration(
+                          labelText: 'Frequency',
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'daily',
+                            child: Text('Daily'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'weekly',
+                            child: Text('Weekly'),
+                          ),
+                        ],
+                        onChanged:
+                            (v) => setSheetState(() {
+                              frequency = v ?? 'daily';
+                            }),
+                      ),
+                      const SizedBox(height: 12),
+                      InkWell(
+                        onTap: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: startDate,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2100),
                           );
-                        }
-                      },
-                      child: const Text('Create habit'),
-                    ),
+                          if (picked != null) {
+                            setSheetState(() => startDate = picked);
+                          }
+                        },
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Start date',
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(DateFormat.yMMMd().format(startDate)),
+                              const Icon(Icons.calendar_today, size: 18),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () async {
+                            final name = nameController.text.trim();
+                            if (name.isEmpty) return;
+                            final id = const Uuid().v4();
+                            await LocalDataService.saveData('habits', id, {
+                              'id': id,
+                              'name': name,
+                              'frequency': frequency,
+                              'startDate': startDate.toIso8601String(),
+                              'completions': <String, bool>{},
+                              'createdAt': DateTime.now().toIso8601String(),
+                            });
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Habit added: $name')),
+                              );
+                            }
+                          },
+                          child: const Text('Create habit'),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             );
           },
@@ -688,113 +735,140 @@ class _DashboardPageState extends State<DashboardPage> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (sheetCtx) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-                left: 16,
-                right: 16,
-                top: 16,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Reminder title',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: descController,
-                    minLines: 2,
-                    maxLines: 4,
-                    decoration: const InputDecoration(labelText: 'Description'),
-                  ),
-                  const SizedBox(height: 12),
-                  InkWell(
-                    onTap: () async {
-                      final date = await showDatePicker(
-                        context: context,
-                        initialDate: scheduledAt,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime(2100),
-                      );
-                      if (date == null) return;
-                      final time = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.fromDateTime(scheduledAt),
-                      );
-                      if (time == null) return;
-                      setSheetState(() {
-                        scheduledAt = DateTime(
-                          date.year,
-                          date.month,
-                          date.day,
-                          time.hour,
-                          time.minute,
-                        );
-                      });
-                    },
-                    child: InputDecorator(
-                      decoration: const InputDecoration(labelText: 'Schedule'),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            return SafeArea(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).viewInsets.bottom,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
                         children: [
-                          Text(DateFormat.yMMMd().add_jm().format(scheduledAt)),
-                          const Icon(Icons.schedule, size: 18),
+                          Icon(
+                            Icons.alarm,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Quick Reminder',
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.bold),
+                          ),
                         ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () async {
-                        final title = titleController.text.trim();
-                        if (title.isEmpty) return;
-                        final id = const Uuid().v4();
-                        final reminderData = {
-                          'id': id,
-                          'title': title,
-                          'description': descController.text.trim(),
-                          'scheduledAt': scheduledAt.toIso8601String(),
-                          'status': 'scheduled',
-                          'createdAt': DateTime.now().toIso8601String(),
-                        };
-
-                        await LocalDataService.saveData(
-                          'reminders',
-                          id,
-                          reminderData,
-                        );
-
-                        await NotificationService.scheduleReminder(
-                          id: id,
-                          title: title,
-                          description: descController.text.trim(),
-                          scheduledTime: scheduledAt,
-                        );
-
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Reminder set for ${DateFormat.jm().format(scheduledAt)}',
-                              ),
-                            ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: titleController,
+                        decoration: const InputDecoration(
+                          labelText: 'Reminder title',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: descController,
+                        minLines: 2,
+                        maxLines: 4,
+                        decoration: const InputDecoration(
+                          labelText: 'Description',
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      InkWell(
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: scheduledAt,
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime(2100),
                           );
-                        }
-                      },
-                      child: const Text('Schedule reminder'),
-                    ),
+                          if (date == null) return;
+                          final time = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.fromDateTime(scheduledAt),
+                          );
+                          if (time == null) return;
+                          setSheetState(() {
+                            scheduledAt = DateTime(
+                              date.year,
+                              date.month,
+                              date.day,
+                              time.hour,
+                              time.minute,
+                            );
+                          });
+                        },
+                        child: InputDecorator(
+                          decoration: const InputDecoration(
+                            labelText: 'Schedule',
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                DateFormat.yMMMd().add_jm().format(scheduledAt),
+                              ),
+                              const Icon(Icons.schedule, size: 18),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () async {
+                            final title = titleController.text.trim();
+                            if (title.isEmpty) return;
+                            final id = const Uuid().v4();
+                            final reminderData = {
+                              'id': id,
+                              'title': title,
+                              'description': descController.text.trim(),
+                              'scheduledAt': scheduledAt.toIso8601String(),
+                              'status': 'scheduled',
+                              'createdAt': DateTime.now().toIso8601String(),
+                            };
+
+                            await LocalDataService.saveData(
+                              'reminders',
+                              id,
+                              reminderData,
+                            );
+
+                            await NotificationService.scheduleReminder(
+                              id: id,
+                              title: title,
+                              description: descController.text.trim(),
+                              scheduledTime: scheduledAt,
+                            );
+
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Reminder set for ${DateFormat.jm().format(scheduledAt)}',
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                          child: const Text('Schedule reminder'),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             );
           },
@@ -810,53 +884,74 @@ class _DashboardPageState extends State<DashboardPage> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (sheetCtx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-            left: 16,
-            right: 16,
-            top: 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.person_add,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Quick Person',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: 'Name'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: notesController,
+                    minLines: 2,
+                    maxLines: 4,
+                    decoration: const InputDecoration(labelText: 'Notes'),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () async {
+                        final name = nameController.text.trim();
+                        if (name.isEmpty) return;
+                        final id = const Uuid().v4();
+                        await LocalDataService.saveData('people', id, {
+                          'id': id,
+                          'name': name,
+                          'notes': notesController.text.trim(),
+                          'createdAt': DateTime.now().toIso8601String(),
+                        });
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Person added: $name')),
+                          );
+                        }
+                      },
+                      child: const Text('Add person'),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: notesController,
-                minLines: 2,
-                maxLines: 4,
-                decoration: const InputDecoration(labelText: 'Notes'),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () async {
-                    final name = nameController.text.trim();
-                    if (name.isEmpty) return;
-                    final id = const Uuid().v4();
-                    await LocalDataService.saveData('people', id, {
-                      'id': id,
-                      'name': name,
-                      'notes': notesController.text.trim(),
-                      'createdAt': DateTime.now().toIso8601String(),
-                    });
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Person added: $name')),
-                      );
-                    }
-                  },
-                  child: const Text('Add person'),
-                ),
-              ),
-            ],
+            ),
           ),
         );
       },

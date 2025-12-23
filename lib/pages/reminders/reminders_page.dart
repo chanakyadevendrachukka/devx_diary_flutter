@@ -136,82 +136,109 @@ class _RemindersPageState extends State<RemindersPage> {
                 showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
+                  backgroundColor: Theme.of(context).colorScheme.surface,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
+                  ),
                   builder:
-                      (context) => SingleChildScrollView(
-                        child: Padding(
+                      (context) => SafeArea(
+                        child: SingleChildScrollView(
                           padding: EdgeInsets.only(
                             bottom: MediaQuery.of(context).viewInsets.bottom,
-                            left: 16,
-                            right: 16,
-                            top: 16,
                           ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              TextField(
-                                controller: _titleController,
-                                decoration: const InputDecoration(
-                                  labelText: 'Title',
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              TextField(
-                                controller: _descController,
-                                minLines: 2,
-                                maxLines: 4,
-                                decoration: const InputDecoration(
-                                  labelText: 'Description',
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              InkWell(
-                                onTap: () async {
-                                  final date = await showDatePicker(
-                                    context: context,
-                                    initialDate: _dateTime,
-                                    firstDate: DateTime.now(),
-                                    lastDate: DateTime(2100),
-                                  );
-                                  if (date == null) return;
-                                  final time = await showTimePicker(
-                                    context: context,
-                                    initialTime: TimeOfDay.fromDateTime(
-                                      _dateTime,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.alarm_add_outlined,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
                                     ),
-                                  );
-                                  if (time == null) return;
-                                  setState(
-                                    () =>
-                                        _dateTime = DateTime(
-                                          date.year,
-                                          date.month,
-                                          date.day,
-                                          time.hour,
-                                          time.minute,
-                                        ),
-                                  );
-                                },
-                                child: InputDecorator(
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'New Reminder',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                TextField(
+                                  controller: _titleController,
                                   decoration: const InputDecoration(
-                                    labelText: 'Date & time',
+                                    labelText: 'Title',
                                   ),
-                                  child: Text(
-                                    DateFormat.yMMMd().add_jm().format(
-                                      _dateTime,
+                                ),
+                                const SizedBox(height: 12),
+                                TextField(
+                                  controller: _descController,
+                                  minLines: 2,
+                                  maxLines: 4,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Description',
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                InkWell(
+                                  onTap: () async {
+                                    final date = await showDatePicker(
+                                      context: context,
+                                      initialDate: _dateTime,
+                                      firstDate: DateTime.now(),
+                                      lastDate: DateTime(2100),
+                                    );
+                                    if (date == null) return;
+                                    final time = await showTimePicker(
+                                      context: context,
+                                      initialTime: TimeOfDay.fromDateTime(
+                                        _dateTime,
+                                      ),
+                                    );
+                                    if (time == null) return;
+                                    setState(
+                                      () =>
+                                          _dateTime = DateTime(
+                                            date.year,
+                                            date.month,
+                                            date.day,
+                                            time.hour,
+                                            time.minute,
+                                          ),
+                                    );
+                                  },
+                                  child: InputDecorator(
+                                    decoration: const InputDecoration(
+                                      labelText: 'Date & time',
+                                    ),
+                                    child: Text(
+                                      DateFormat.yMMMd().add_jm().format(
+                                        _dateTime,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 16),
-                              SizedBox(
-                                width: double.infinity,
-                                child: FilledButton(
-                                  onPressed: _addReminder,
-                                  child: const Text('Schedule reminder alarm'),
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: FilledButton(
+                                    onPressed: _addReminder,
+                                    child: const Text(
+                                      'Schedule reminder alarm',
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 16),
-                            ],
+                                const SizedBox(height: 12),
+                              ],
+                            ),
                           ),
                         ),
                       ),

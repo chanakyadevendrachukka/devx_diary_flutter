@@ -50,65 +50,88 @@ class _VaultPageState extends State<VaultPage> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder:
-          (context) => Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-              left: 16,
-              right: 16,
-              top: 16,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: 'Website/App'),
+          (context) => SafeArea(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.lock_outline,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          index == null ? 'Add Credential' : 'Edit Credential',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Website/App',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: userController,
+                      decoration: const InputDecoration(
+                        labelText: 'Username/Email',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: passController,
+                      decoration: const InputDecoration(labelText: 'Password'),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: notesController,
+                      minLines: 2,
+                      maxLines: 4,
+                      decoration: const InputDecoration(labelText: 'Notes'),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () async {
+                          final item = {
+                            'name': nameController.text.trim(),
+                            'username': userController.text.trim(),
+                            'password': passController.text.trim(),
+                            'notes': notesController.text.trim(),
+                          };
+                          if (index == null) {
+                            _items.add(item);
+                          } else {
+                            _items[index] = item;
+                          }
+                          await _save();
+                          if (context.mounted) Navigator.pop(context);
+                          setState(() {});
+                        },
+                        child: Text(index == null ? 'Add' : 'Save'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: userController,
-                  decoration: const InputDecoration(
-                    labelText: 'Username/Email',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: passController,
-                  decoration: const InputDecoration(labelText: 'Password'),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: notesController,
-                  minLines: 2,
-                  maxLines: 4,
-                  decoration: const InputDecoration(labelText: 'Notes'),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () async {
-                      final item = {
-                        'name': nameController.text.trim(),
-                        'username': userController.text.trim(),
-                        'password': passController.text.trim(),
-                        'notes': notesController.text.trim(),
-                      };
-                      if (index == null) {
-                        _items.add(item);
-                      } else {
-                        _items[index] = item;
-                      }
-                      await _save();
-                      if (context.mounted) Navigator.pop(context);
-                      setState(() {});
-                    },
-                    child: Text(index == null ? 'Add' : 'Save'),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
+              ),
             ),
           ),
     );
