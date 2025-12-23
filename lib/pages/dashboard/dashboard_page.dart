@@ -12,8 +12,42 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    print('Dashboard page initialized');
+    _checkInitialization();
+  }
+
+  void _checkInitialization() {
+    try {
+      // Check if Hive boxes are accessible
+      LocalDataService.getBox('entries');
+      LocalDataService.getBox('habits');
+      LocalDataService.getBox('reminders');
+      setState(() {
+        _isInitialized = true;
+      });
+      print('Dashboard boxes initialized successfully');
+    } catch (e) {
+      print('Dashboard initialization error: $e');
+      // Retry after a short delay
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) _checkInitialization();
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    print('Building dashboard, initialized: $_isInitialized');
+
+    if (!_isInitialized) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -25,6 +59,10 @@ class _DashboardPageState extends State<DashboardPage> {
 
           // Stats Cards
           _buildStatsCards(),
+          const SizedBox(height: 24),
+
+          // Quick Actions
+          _buildQuickActions(context),
           const SizedBox(height: 24),
 
           // Mood Heatmap
@@ -196,6 +234,98 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  Widget _buildQuickActions(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.flash_on,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Quick Actions',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _buildActionButton('New Entry', Icons.edit, Colors.blue, () {
+                  // Navigate to diary page
+                  // This will be handled by the bottom nav
+                }),
+                _buildActionButton(
+                  'Track Habit',
+                  Icons.check_circle,
+                  Colors.green,
+                  () {},
+                ),
+                _buildActionButton(
+                  'Add Reminder',
+                  Icons.alarm,
+                  Colors.purple,
+                  () {},
+                ),
+                _buildActionButton(
+                  'Add Person',
+                  Icons.person_add,
+                  Colors.orange,
+                  () {},
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton(
+    String label,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildMoodHeatmap() {
     return ValueListenableBuilder(
       valueListenable: LocalDataService.getBox('entries').listenable(),
@@ -245,65 +375,81 @@ class _DashboardPageState extends State<DashboardPage> {
     final moodMap = <String, String>{};
     for (final entry in entries) {
       if (entry['date'] != null) {
-        final date = DateTime.parse(entry['date']);
-        final key = DateFormat('yyyy-MM-dd').format(date);
-        moodMap[key] = entry['mood'] ?? 'neutral';
+        try {
+          final date = DateTime.parse(entry['date']);
+          final key = DateFormat('yyyy-MM-dd').format(date);
+          moodMap[key] = entry['mood'] ?? 'neutral';
+        } catch (e) {
+          print('Error parsing date: $e');
+        }
       }
     }
 
-    return Column(
-      children: [
-        // Days of week labels
-        Row(
-          children: [
-            const SizedBox(width: 30),
-            for (final day in ['Mon', 'Wed', 'Fri'])
-              Expanded(
-                flex: 2,
-                child: Text(
-                  day,
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        // Heatmap grid
-        Row(
+    // Create grid of 12 weeks (84 days) organized by week
+    final weeks = <List<DateTime>>[];
+    for (int week = 0; week < 12; week++) {
+      final weekDays = <DateTime>[];
+      for (int day = 0; day < 7; day++) {
+        final date = startDate.add(Duration(days: week * 7 + day));
+        if (!date.isAfter(today)) {
+          weekDays.add(date);
+        }
+      }
+      if (weekDays.isNotEmpty) {
+        weeks.add(weekDays);
+      }
+    }
+
+    return SizedBox(
+      height: 160,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Week labels
+            // Day labels
             Column(
-              children: List.generate(
-                7,
-                (i) => Container(
-                  height: 20,
-                  width: 30,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(
+                  (day) => SizedBox(
+                    height: 18,
+                    child: Text(
+                      day,
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-            // Grid
-            Expanded(
-              child: Wrap(
-                spacing: 4,
-                runSpacing: 4,
-                children: List.generate(84, (index) {
-                  final date = startDate.add(Duration(days: index));
-                  final key = DateFormat('yyyy-MM-dd').format(date);
-                  final mood = moodMap[key];
-                  return _buildMoodCell(date, mood);
-                }),
-              ),
-            ),
+            const SizedBox(width: 8),
+            // Week columns
+            ...weeks.map((weekDays) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    ...List.generate(7, (dayIndex) {
+                      if (dayIndex < weekDays.length) {
+                        final date = weekDays[dayIndex];
+                        final key = DateFormat('yyyy-MM-dd').format(date);
+                        final mood = moodMap[key];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: _buildMoodCell(date, mood),
+                        );
+                      }
+                      return const SizedBox(height: 14, width: 14);
+                    }),
+                  ],
+                ),
+              );
+            }),
           ],
         ),
-      ],
+      ),
     );
   }
 
@@ -318,11 +464,11 @@ class _DashboardPageState extends State<DashboardPage> {
     return Tooltip(
       message: '${DateFormat.MMMd().format(date)}\n${mood ?? 'No entry'}',
       child: Container(
-        width: 16,
-        height: 16,
+        width: 14,
+        height: 14,
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(3),
           border: Border.all(color: Colors.grey.shade300, width: 0.5),
         ),
       ),
@@ -410,61 +556,81 @@ class _DashboardPageState extends State<DashboardPage> {
     final activityMap = <String, int>{};
     for (final entry in entries) {
       if (entry['date'] != null) {
-        final date = DateTime.parse(entry['date']);
-        final key = DateFormat('yyyy-MM-dd').format(date);
-        activityMap[key] = (activityMap[key] ?? 0) + 1;
+        try {
+          final date = DateTime.parse(entry['date']);
+          final key = DateFormat('yyyy-MM-dd').format(date);
+          activityMap[key] = (activityMap[key] ?? 0) + 1;
+        } catch (e) {
+          print('Error parsing date: $e');
+        }
       }
     }
 
-    return Column(
-      children: [
-        Row(
-          children: [
-            const SizedBox(width: 30),
-            for (final day in ['Mon', 'Wed', 'Fri'])
-              Expanded(
-                flex: 2,
-                child: Text(
-                  day,
-                  style: const TextStyle(fontSize: 10, color: Colors.grey),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Row(
+    // Create grid of 12 weeks (84 days) organized by week
+    final weeks = <List<DateTime>>[];
+    for (int week = 0; week < 12; week++) {
+      final weekDays = <DateTime>[];
+      for (int day = 0; day < 7; day++) {
+        final date = startDate.add(Duration(days: week * 7 + day));
+        if (!date.isAfter(today)) {
+          weekDays.add(date);
+        }
+      }
+      if (weekDays.isNotEmpty) {
+        weeks.add(weekDays);
+      }
+    }
+
+    return SizedBox(
+      height: 160,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Day labels
             Column(
-              children: List.generate(
-                7,
-                (i) => Container(
-                  height: 20,
-                  width: 30,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i],
-                    style: const TextStyle(fontSize: 10, color: Colors.grey),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                ...['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(
+                  (day) => SizedBox(
+                    height: 18,
+                    child: Text(
+                      day,
+                      style: const TextStyle(fontSize: 10, color: Colors.grey),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-            Expanded(
-              child: Wrap(
-                spacing: 4,
-                runSpacing: 4,
-                children: List.generate(84, (index) {
-                  final date = startDate.add(Duration(days: index));
-                  final key = DateFormat('yyyy-MM-dd').format(date);
-                  final count = activityMap[key] ?? 0;
-                  return _buildActivityCell(date, count);
-                }),
-              ),
-            ),
+            const SizedBox(width: 8),
+            // Week columns
+            ...weeks.map((weekDays) {
+              return Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    ...List.generate(7, (dayIndex) {
+                      if (dayIndex < weekDays.length) {
+                        final date = weekDays[dayIndex];
+                        final key = DateFormat('yyyy-MM-dd').format(date);
+                        final count = activityMap[key] ?? 0;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: _buildActivityCell(date, count),
+                        );
+                      }
+                      return const SizedBox(height: 14, width: 14);
+                    }),
+                  ],
+                ),
+              );
+            }),
           ],
         ),
-      ],
+      ),
     );
   }
 
@@ -484,11 +650,11 @@ class _DashboardPageState extends State<DashboardPage> {
       message:
           '${DateFormat.MMMd().format(date)}\n$count ${count == 1 ? 'entry' : 'entries'}',
       child: Container(
-        width: 16,
-        height: 16,
+        width: 14,
+        height: 14,
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(3),
           border: Border.all(color: Colors.grey.shade300, width: 0.5),
         ),
       ),
@@ -541,15 +707,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
         final recentEntries = entries.take(5).toList();
 
-        if (recentEntries.isEmpty) {
-          return const Card(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: Text('No recent activity')),
-            ),
-          );
-        }
-
         return Card(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -572,7 +729,40 @@ class _DashboardPageState extends State<DashboardPage> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                ...recentEntries.map((entry) => _buildActivityItem(entry)),
+                if (recentEntries.isEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.book_outlined,
+                            size: 48,
+                            color: Colors.grey.shade400,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No entries yet',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Start writing your first diary entry',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  ...recentEntries.map((entry) => _buildActivityItem(entry)),
               ],
             ),
           ),

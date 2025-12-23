@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -46,12 +44,6 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final minItemWidth = 88.0;
-    final barWidth = math.max(
-      MediaQuery.of(context).size.width,
-      _labels.length * minItemWidth,
-    );
-
     return Scaffold(
       appBar: AppBar(
         title: Text(_labels[_index]),
@@ -64,60 +56,65 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
       body: _pages[_index],
-      bottomNavigationBar: SafeArea(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minWidth: barWidth),
-            child: NavigationBar(
-              selectedIndex: _index,
-              onDestinationSelected: (i) => setState(() => _index = i),
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.dashboard_outlined),
-                  selectedIcon: Icon(Icons.dashboard),
-                  label: 'Dashboard',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.book_outlined),
-                  selectedIcon: Icon(Icons.book),
-                  label: 'Diary',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.check_circle_outline),
-                  selectedIcon: Icon(Icons.check_circle),
-                  label: 'Habits',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.view_agenda_outlined),
-                  selectedIcon: Icon(Icons.view_agenda),
-                  label: 'Routine',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.people_alt_outlined),
-                  selectedIcon: Icon(Icons.people_alt),
-                  label: 'People',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.lock_outline),
-                  selectedIcon: Icon(Icons.lock),
-                  label: 'Vault',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.alarm_add_outlined),
-                  selectedIcon: Icon(Icons.alarm_add),
-                  label: 'Reminders',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.settings_outlined),
-                  selectedIcon: Icon(Icons.settings),
-                  label: 'Settings',
-                ),
-              ],
+      bottomNavigationBar: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minWidth: constraints.maxWidth,
+                maxWidth: constraints.maxWidth * 2,
+              ),
+              child: NavigationBar(
+                selectedIndex: _index,
+                onDestinationSelected: (i) => setState(() => _index = i),
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                destinations: const [
+                  NavigationDestination(
+                    icon: Icon(Icons.dashboard_outlined),
+                    selectedIcon: Icon(Icons.dashboard),
+                    label: 'Dashboard',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.book_outlined),
+                    selectedIcon: Icon(Icons.book),
+                    label: 'Diary',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.check_circle_outline),
+                    selectedIcon: Icon(Icons.check_circle),
+                    label: 'Habits',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.view_agenda_outlined),
+                    selectedIcon: Icon(Icons.view_agenda),
+                    label: 'Routine',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.people_alt_outlined),
+                    selectedIcon: Icon(Icons.people_alt),
+                    label: 'People',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.lock_outline),
+                    selectedIcon: Icon(Icons.lock),
+                    label: 'Vault',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.alarm_add_outlined),
+                    selectedIcon: Icon(Icons.alarm_add),
+                    label: 'Reminders',
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.settings_outlined),
+                    selectedIcon: Icon(Icons.settings),
+                    label: 'Settings',
+                  ),
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
